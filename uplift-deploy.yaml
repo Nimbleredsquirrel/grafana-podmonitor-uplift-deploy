@@ -1,0 +1,16 @@
+apiVersion: machinelearning.seldon.io/v1alpha2
+kind: SeldonDeployment
+metadata:
+  name: uplift-predictor
+spec:
+  predictors:
+    - componentSpecs:
+        - spec:
+            containers:
+              - image: alph8rd/uplift-predictor
+                name: uplift-predictor
+                imagePullPolicy: Always
+      graph:
+        name: uplift-predictor
+        type: MODEL
+      name: uplift-predictor

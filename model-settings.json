@@ -1,0 +1,8 @@
+{
+    "name": "uplift-predictor",
+    "implementation": "UpliftPredictor",
+    "parameters": {
+      "uri": "./uplift_model.joblib"
+    }
+  }
+  
