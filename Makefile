@@ -1,3 +1,6 @@
+PYTHON = ./venv/bin/python
+PIP    = ./venv/bin/pip
+
 deploy-all: kind-cluster ambassador seldon-core prometheus grafana
 
 kind-cluster:
@@ -43,19 +46,18 @@ grafana:
 
 venv:
 	python -m venv venv
-	source venv/bin/activate
 
 train: venv
-	pip install -r requirements.txt
-	python train.py
+	$(PIP) install -r requirements.txt
+	$(PYTHON) train.py
 
-build-solo: venv
-	python edit_model_settings.py solo
-	mlserver build . -t alph8rd/uplift-predictor
+build-solo: train
+	$(PYTHON) edit_model_settings.py solo
+	$(PYTHON) -m mlserver build . -t alph8rd/uplift-predictor
 
-build-two: venv
-	python edit_model_settings.py two
-	mlserver build . -t alph8rd/uplift-predictor
+build-two: train
+	$(PYTHON) edit_model_settings.py two
+	$(PYTHON) -m mlserver build . -t alph8rd/uplift-predictor
 
 push-image:
 	docker push alph8rd/uplift-predictor
@@ -67,7 +69,7 @@ delete-uplift-predictor:
 	kubectl delete -f uplift-deploy.yaml
 
 podmonitor:
-	kubectl apply -f podmonitor.yaml 
+	kubectl apply -f podmonitor.yaml
 
 predictor-forward-port:
 	kubectl port-forward svc/uplift-predictor-uplift-predictor-uplift-predictor 9000:9000
@@ -77,7 +79,8 @@ prom-forward-port:
 
 graf-forward-port:
 	kubectl get secret --namespace seldon-monitoring grafana-seldon-monitoring -o jsonpath="{.data.admin-password}" | base64 --decode ; echo
-	kubectl port-forward svc/grafana-seldon-monitoring 3000:80 --namespace seldon-monitoring	
+	kubectl port-forward svc/grafana-seldon-monitoring 3000:80 --namespace seldon-monitoring
 
 test: venv
-	pip install requests
+	$(PIP) install requests pytest
+	$(PYTHON) -m pytest tests/

@@ -7,7 +7,7 @@ from sklearn.model_selection import train_test_split
 from joblib import dump
 
 def load_and_process_dataset(features_output, train_output):
-    dataset_bundle = load_x5()
+    dataset_bundle = fetch_x5()
     clients_info = dataset_bundle.data["clients"].set_index("client_id")
     training_data = pd.concat(
         [dataset_bundle.data["train"], dataset_bundle.treatment, dataset_bundle.target], axis=1
@@ -55,7 +55,17 @@ def train_given_model(model, features_path, train_path, **kwargs):
     return model
 
 if __name__ == "__main__":
+    os.makedirs('data', exist_ok=True)
     features_output_path = 'data/processed_features.parquet'
     train_output_path = 'data/processed_train_data.parquet'
+
     if not os.path.exists(features_output_path):
         load_and_process_dataset(features_output_path, train_output_path)
+
+    solo_model = setup_model('solo')
+    solo_model = train_given_model(solo_model, features_output_path, train_output_path)
+    dump(solo_model, 'one_model.joblib')
+
+    two_model = setup_model('two')
+    two_model = train_given_model(two_model, features_output_path, train_output_path)
+    dump(two_model, 'two_model.joblib')

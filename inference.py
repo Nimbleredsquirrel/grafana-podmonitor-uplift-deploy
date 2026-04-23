@@ -1,65 +1,39 @@
 import logging
 
-from server_ml import MLService, data_types
-from server_ml.utils import fetch_model_path
-from server_ml.encoders import TextEncoder
 import joblib
 import numpy as np
-import json
+from mlserver import MLModel
+from mlserver.codecs import NumpyCodec
+from mlserver.types import InferenceRequest, InferenceResponse, ResponseOutput
 
 logging.basicConfig(level=logging.ERROR)
 logger = logging.getLogger(__name__)
 
 
-class UpliftPredictor(MLService):
-    def __init__(self):
-        super().__init__()
-        self.uplift_model = None
-        self.is_ready = False
+class UpliftPredictor(MLModel):
+    async def load(self) -> bool:
+        model_uri = self.settings.parameters.uri
+        self.uplift_model = joblib.load(model_uri)
+        self.ready = True
+        return self.ready
 
-    async def setup_model(self):
-        model_path = await fetch_model_path(self._configurations)
-        self.uplift_model = joblib.load(model_path)
-        self.is_ready = True
-        return self.is_ready
+    async def predict(self, payload: InferenceRequest) -> InferenceResponse:
+        input_data = NumpyCodec.decode_input(payload.inputs[0])
+        if input_data.ndim == 1:
+            input_data = input_data.reshape(1, -1)
 
-    def _parse(self, request):
-        inputs = {}
-        for sht in payload.inputs:
-            inputs[sht.name] = json.loads(
-                "".join(self.decode(sht, default_codec=StringCodec))
-            )
+        predictions = self.uplift_model.predict(input_data)
 
-        return inputs
-
-    async def make_prediction(self, request):
-        try:
-            decoded_request = self._parse(request)\
-            .get("prediction_request", {})
-            feature_array = np.array(decoded_request.get("features", []))
-            prediction = self.uplift_model.predict(feature_array)
-            prediction_result = {"success": True, 
-                                "prediction": prediction}
-
-        except Exception as e:
-            prediction_result = {"success": False, 
-                                 "prediction": None, 
-                                 "error": str(e)}
-
-        response_data = json.dumps(prediction_result)
-
-        return data_types.Response(
-            id=request.id,
+        return InferenceResponse(
+            id=payload.id,
             model_name=self.name,
             model_version=self.version,
             outputs=[
-                data_types.Output(
-                    name="prediction_result",
-                    shape=[len(response_data)],
-                    dtype="BYTES",
-                    data=[response_data.encode("UTF-8")],
-                    params=data_types.\
-                    Parameters(content_type="application/json"),
+                ResponseOutput(
+                    name="predictions",
+                    shape=list(predictions.shape),
+                    datatype="FP64",
+                    data=predictions.tolist(),
                 )
             ],
         )

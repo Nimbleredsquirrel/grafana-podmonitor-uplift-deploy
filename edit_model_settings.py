@@ -4,10 +4,10 @@ import os
 
 def update_model_configuration(model_type):
 
-    config_file_path = "model-config.json"
+    config_file_path = "model-settings.json"
     model_config = {
         "name": "uplift-predictor",
-        "implementation": "inference.UpliftModel",
+        "implementation": "inference.UpliftPredictor",
         "parameters": {"uri": ""}
     }
 

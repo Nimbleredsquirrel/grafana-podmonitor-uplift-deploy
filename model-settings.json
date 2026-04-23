@@ -1,8 +1,7 @@
 {
     "name": "uplift-predictor",
-    "implementation": "UpliftPredictor",
+    "implementation": "inference.UpliftPredictor",
     "parameters": {
-      "uri": "./uplift_model.joblib"
+        "uri": "./uplift_model.joblib"
     }
-  }
-  
+}
